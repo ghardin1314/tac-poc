@@ -1,0 +1,36 @@
+{
+  "name": "contracts",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/contracts/types",
+  "projectType": "library",
+  "targets": {
+    "lint": {
+      "executor": "@nrwl/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["libs/contracts/**/*.ts"]
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [{ "command": "forge test -vvv", "forwardAllArgs": false }],
+        "cwd": "libs/contracts"
+      }
+    },
+    "codegen": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          { "command": "forge build", "forwardAllArgs": false },
+          {
+            "command": "typechain --target=ethers-v5 --always-generate-overloads --out-dir types --discriminate-types \"./out/!(Test|test.sol)**/*.json\" "
+          }
+        ],
+        "cwd": "libs/contracts",
+        "parallel": false
+      }
+    }
+  },
+  "tags": []
+}
