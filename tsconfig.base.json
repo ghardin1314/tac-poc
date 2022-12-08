@@ -17,7 +17,8 @@
     "baseUrl": ".",
     "esModuleInterop": true,
     "paths": {
-      "@tac-poc/contracts": ["libs/contracts/types/index.ts"]
+      "@tac-poc/contracts": ["libs/contracts/types/index.ts"],
+      "@tac-poc/tac": ["libs/tac/src/index.ts"]
     }
   },
   "exclude": ["node_modules", "tmp"]
