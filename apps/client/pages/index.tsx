@@ -11,22 +11,13 @@ import { useEffect, useRef, useState } from 'react';
 import { useSigner } from 'wagmi';
 import { providers, utils } from 'ethers';
 import * as fs from 'fs';
+import { Revocation__factory } from '@tac-poc/contracts';
 
 const config = {
   threshold: 3,
   shares: 5,
   porterUri: 'https://porter-tapir.nucypher.community',
 };
-
-const condition = new Conditions.RpcCondition({
-  chain: 80001,
-  method: 'eth_getBalance',
-  parameters: [':userAddress', 'latest'],
-  returnValueTest: {
-    comparator: '>=',
-    value: utils.parseEther('1').toString(),
-  },
-});
 
 export function Index({ deployedStrategyJSON }) {
   const plaintextRef = useRef<HTMLInputElement>(null);
@@ -94,6 +85,20 @@ export function Index({ deployedStrategyJSON }) {
       return;
     }
 
+    const condition = new Conditions.Condition({
+      contractAddress: '0x9216d4d91bADCD1A8CC65215B2f7D067C6fEFB46',
+      method: 'isRevoked',
+      parameters: [':userAddress'],
+      functionAbi: Revocation__factory.abi.find(
+        (abi) => abi.name === 'isRevoked'
+      ),
+      chain: 80001,
+      returnValueTest: {
+        comparator: '==',
+        value: false,
+      },
+    });
+
     const cyphertext = encrypter.encryptMessage(
       plaintext,
       new ConditionSet([condition])
@@ -115,42 +120,15 @@ export function Index({ deployedStrategyJSON }) {
 
     const decrypter = deployedStrategy.decrypter;
 
-    // cyphertext.conditions = [
-    //   {
-    //     chain: 1,
-    //     method: 'eth_getBalance',
-    //     parameters: [':userAddress', 'latest'],
-    //     returnValueTest: { comparator: '>=', value: '0' },
-    //   },
-    // ];
-
-    // const jsonConditions = JSON.parse(cyphertext.conditions.toString());
-
-    // console.log(cyphertext.conditions.toString());
-
-    const jsonConditions = [
-      {
-        contractAddress: '',
-        standardContractType: '',
-        chain: 5,
-        method: 'timelock',
-        returnValueTest: {
-          comparator: '>',
-          value: 100,
-        },
-      },
-    ];
-
-    const conditions = [];
-
-    for (const _condition of jsonConditions) {
-      const condition = new Conditions.Condition(_condition);
-      conditions.push(condition);
-    }
-
-    const conditionCtx = new ConditionSet(conditions).buildContext(
-      signer.provider as providers.Web3Provider
-    );
+    const conditionCtx = new ConditionSet([
+      // Dummy conditions to trigger signature
+      new Conditions.Condition({
+        chain: 1,
+        method: 'eth_getBalance',
+        parameters: [':userAddress', 'latest'],
+        returnValueTest: { comparator: '>=', value: '0' },
+      }),
+    ]).buildContext(signer.provider as providers.Web3Provider);
 
     try {
       const plaintext = await decrypter.retrieveAndDecrypt(
