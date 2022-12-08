@@ -1,0 +1,28 @@
+version: '3'
+
+includes:
+  infra:
+    taskfile: ./tools/Taskfile.infra.yml
+    dir: ./tools
+  channels:
+    taskfile: ./apps/channels/Taskfile.yml
+    dir: ./apps/channels
+
+tasks:
+  install:
+    desc: Install package dependencies
+    cmds:
+      - yarn
+
+  ci:check:
+    desc: Run all CI tests locally before pushing to catch errors
+    cmds:
+      - nx affected --target=lint
+      - nx run-many --target=codegen
+      - nx affected --target=test
+      - nx affected --target=build
+      - nx format
+
+  codegen:
+    cmds:
+      - nx run-many --target=codegen
