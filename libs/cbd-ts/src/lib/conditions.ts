@@ -80,5 +80,10 @@ export function toWasm(condition: Condition) {
 }
 
 export function toAad(condition: Condition) {
-  return toBytes(toJsonStr(condition));
+  return toBytes(
+    toJsonStr({
+      version: '1.0.0',
+      condition: validateCondition(condition), // Maybe dont bury validation here
+    })
+  );
 }
