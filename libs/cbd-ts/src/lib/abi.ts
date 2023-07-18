@@ -1,3 +1,9 @@
+import { Address } from 'wagmi';
+
+// TODO! Make network specific
+export const coordinatorAddress: Address =
+  '0x0f019Ade1D34399D946CF2f161386362655Dd1A4';
+
 export const coordinatorAbi = [
   {
     inputs: [

@@ -17,7 +17,7 @@ import {
 } from '@nucypher/nucypher-core';
 import { Condition, toAad, toWasm } from './conditions';
 import { PublicClient, fromHex, Address } from 'viem';
-import { coordinatorAbi } from './abi';
+import { coordinatorAbi, coordinatorAddress } from './abi';
 import { Porter, Ritual } from './types';
 import { cbdDecrypt } from './porter';
 
@@ -133,7 +133,7 @@ export async function getDkgParticipants({
   client: PublicClient;
 }): Promise<DkgParticipant[]> {
   const participants = await client.readContract({
-    address: '0x0f019Ade1D34399D946CF2f161386362655Dd1A4',
+    address: coordinatorAddress,
     functionName: 'getParticipants',
     abi: coordinatorAbi,
     args: [ritualId],
