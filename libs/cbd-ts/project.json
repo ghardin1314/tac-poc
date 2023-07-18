@@ -1,0 +1,24 @@
+{
+  "name": "cbd-ts",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "libs/cbd-ts/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "lint": {
+      "executor": "@nrwl/linter:eslint",
+      "outputs": ["{options.outputFile}"],
+      "options": {
+        "lintFilePatterns": ["libs/cbd-ts/**/*.{ts,tsx,js,jsx}"]
+      }
+    },
+    "test": {
+      "executor": "@nrwl/jest:jest",
+      "outputs": ["coverage/libs/cbd-ts"],
+      "options": {
+        "jestConfig": "libs/cbd-ts/jest.config.ts",
+        "passWithNoTests": true
+      }
+    }
+  }
+}

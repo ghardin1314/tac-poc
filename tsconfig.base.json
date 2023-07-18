@@ -9,14 +9,17 @@
     "emitDecoratorMetadata": true,
     "experimentalDecorators": true,
     "importHelpers": true,
-    "target": "es2015",
+    "target": "es2021",
     "module": "esnext",
     "lib": ["es2017", "dom"],
     "skipLibCheck": true,
     "skipDefaultLibCheck": true,
     "baseUrl": ".",
     "esModuleInterop": true,
+    "strict": true,
+    "strictNullChecks": true,
     "paths": {
+      "@tac-poc/cbd-ts": ["libs/cbd-ts/src/index.ts"],
       "@tac-poc/contracts": ["libs/contracts/types/index.ts"],
       "@tac-poc/tac": ["libs/tac/src/index.ts"]
     }

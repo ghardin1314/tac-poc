@@ -7,12 +7,15 @@ import {
   SecretKey,
 } from '@nucypher/nucypher-ts';
 import { useEffect, useRef, useState } from 'react';
-import { useProvider, useSigner } from 'wagmi';
+import { Context } from '@nucypher/nucypher-core';
+
 import { providers, utils } from 'ethers';
 import { Revocation__factory } from '@tac-poc/contracts';
-import { RevokeStatus } from '@tac-poc/tac';
+import { RevokeStatus, useEthersSigner } from '@tac-poc/tac';
 import { PrimaryButton } from 'libs/tac/src/lib/components/button';
 import { arrayify } from 'ethers/lib/utils.js';
+import { FerveoVariant, retrieveAndDecrypt } from '@tac-poc/cbd-ts';
+import { usePublicClient } from 'wagmi';
 
 const porterUri = 'https://porter-tapir.nucypher.community';
 
@@ -28,8 +31,8 @@ const aliceSecretKey =
   '0xeaa57275bc08381e7b76dcf00f2a24f63053f2ce2aaaf42f183e77572fe09c57';
 
 export function Index() {
-  const { data: signer } = useSigner();
-  const provider = useProvider();
+  const signer = useEthersSigner();
+  const client = usePublicClient();
 
   const createCohort = async () => {
     const cohort = await Cohort.create(config);
@@ -76,9 +79,23 @@ export function Index() {
       contractAddress: revocationAddress,
       method: 'isRevoked',
       parameters: [':userAddress'],
-      functionAbi: Revocation__factory.abi.find(
-        (abi) => abi.name === 'isRevoked'
-      ),
+      functionAbi: {
+        inputs: [
+          {
+            name: 'addr',
+            type: 'address',
+          },
+        ],
+        name: 'isRevoked',
+        outputs: [
+          {
+            name: 'addr',
+            type: 'bool',
+          },
+        ],
+        stateMutability: 'view',
+        type: 'function',
+      },
       chain: 80001,
       returnValueTest: {
         comparator: '==',
@@ -103,6 +120,10 @@ export function Index() {
 
     console.log(conditionExpr.toJson());
 
+    const conditionCtx = conditionExpr.buildContext(
+      signer?.provider as providers.Web3Provider
+    );
+
     const encrypter = deployedStrategy.makeEncrypter(conditionExpr);
 
     const cyphertext = encrypter.encryptMessageCbd('hello world');
@@ -110,13 +131,55 @@ export function Index() {
     console.log(cyphertext);
 
     const plaintext = await deployedStrategy.decrypter.retrieveAndDecrypt(
-      signer.provider as providers.Web3Provider,
+      signer?.provider as providers.Web3Provider,
       conditionExpr,
       0,
       cyphertext.ciphertext
     );
 
-    console.log(String.fromCharCode(...plaintext));
+    const plaintext1 = await retrieveAndDecrypt({
+      ritual: {
+        id: 17,
+        threshold: 3,
+      },
+      porter: {
+        uri: porterUri,
+      },
+      condition: {
+        conditionType: 'contract',
+        contractAddress: revocationAddress,
+        method: 'isRevoked',
+        parameters: [':userAddress'],
+        functionAbi: {
+          inputs: [
+            {
+              name: '',
+              type: 'address',
+            },
+          ],
+          name: 'isRevoked',
+          outputs: [
+            {
+              name: '',
+              type: 'bool',
+            },
+          ],
+          stateMutability: 'view',
+          type: 'function',
+        },
+        chain: 80001,
+        returnValueTest: {
+          comparator: '==',
+          value: false,
+        },
+      },
+      conditionCtx: new Context(await conditionCtx.toJson()),
+      variant: FerveoVariant.Simple,
+      client,
+      cyphertext: cyphertext.ciphertext,
+    });
+
+    console.log(String.fromCharCode(...plaintext1));
 
     // const context = new conditions.ConditionContext(
     //   [condition],

@@ -1,8 +1,9 @@
 import { Revocation__factory } from '@tac-poc/contracts';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { useSigner } from 'wagmi';
+
 import { PrimaryButton, SecondaryButton } from './button';
+import { useEthersSigner } from './utils';
 
 export interface RevokeStatusProps {
   revocationAddress: string;
@@ -10,7 +11,7 @@ export interface RevokeStatusProps {
 
 export const RevokeStatus = ({ revocationAddress }: RevokeStatusProps) => {
   const [isRevoked, setIsRevoked] = useState<boolean>(false);
-  const { data: signer } = useSigner();
+  const signer = useEthersSigner();
 
   useEffect(() => {
     checkRevocation();
