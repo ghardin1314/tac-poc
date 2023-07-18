@@ -1,9 +1,7 @@
-import { utils } from 'ethers';
-
 export interface EncryptedMetadataProps {
   title?: string;
   description?: string;
-  image: Uint8Array;
+  image: string;
   conditions: any;
 }
 
@@ -20,7 +18,7 @@ export const EncryptedMetadata = ({
           {
             title,
             description,
-            image: utils.hexlify(image),
+            image: image,
             conditions: conditions,
           },
           null,

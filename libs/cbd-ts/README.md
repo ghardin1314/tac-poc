@@ -1,0 +1,8 @@
+- [x] Condition context
+- [ ] Cache signature
+- [x] Make Encrypter
+- [x] Encrypt plaintext
+- [ ] add default name for abi param
+- [ ] use abi type for abi param
+- [ ] add time and compound conditions
+- [ ] add other rpc methods

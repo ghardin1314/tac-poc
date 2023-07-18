@@ -1,129 +1,199 @@
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import {
-  CbdStrategy,
-  Cohort,
-  conditions,
-  DeployedCbdStrategy,
-  SecretKey,
-} from '@nucypher/nucypher-ts';
-import { useEffect, useRef, useState } from 'react';
-import { useProvider, useSigner } from 'wagmi';
-import { providers, utils } from 'ethers';
-import { Revocation__factory } from '@tac-poc/contracts';
-import { RevokeStatus } from '@tac-poc/tac';
+  DecryptMetadata,
+  EncryptedMetadataProps,
+  Metadata,
+  RevokeStatus,
+  useEthersSigner,
+} from '@tac-poc/tac';
 import { PrimaryButton } from 'libs/tac/src/lib/components/button';
-import { arrayify } from 'ethers/lib/utils.js';
+import {
+  Condition,
+  craftContext,
+  encrypt,
+  FerveoVariant,
+  getRitual,
+  retrieveAndDecrypt,
+} from '@tac-poc/cbd-ts';
+import { usePublicClient, useWalletClient } from 'wagmi';
+import { useEffect, useRef, useState } from 'react';
+import {
+  MetadataForm,
+  MetadataFormInputs,
+} from 'libs/tac/src/lib/components/metadata-form';
+import { toJsonStr } from 'libs/cbd-ts/src/lib/utils';
+import { EncryptedMetadata } from 'libs/tac/src/lib/components/encrypted-metadata';
+import { Ciphertext } from '@nucypher/nucypher-core';
 
 const porterUri = 'https://porter-tapir.nucypher.community';
 
-const config = {
-  threshold: 3,
-  shares: 5,
-  porterUri,
-};
-
 const revocationAddress = '0x9216d4d91bADCD1A8CC65215B2f7D067C6fEFB46';
 
-const aliceSecretKey =
-  '0xeaa57275bc08381e7b76dcf00f2a24f63053f2ce2aaaf42f183e77572fe09c57';
+const condition: Condition = {
+  conditionType: 'contract',
+  contractAddress: revocationAddress,
+  method: 'isRevoked',
+  parameters: [`:userAddress`],
+  functionAbi: {
+    inputs: [
+      {
+        name: 'addr',
+        type: 'address',
+      },
+    ],
+    name: 'isRevoked',
+    outputs: [
+      {
+        name: 'addr',
+        type: 'bool',
+      },
+    ],
+    stateMutability: 'view',
+    type: 'function',
+  },
+  chain: 80001,
+  returnValueTest: {
+    comparator: '==',
+    value: false,
+  },
+};
 
 export function Index() {
-  const { data: signer } = useSigner();
-  const provider = useProvider();
+  const [ritualId, setRitualId] = useState(17);
+  const [threshold, setThreshold] = useState(0);
+  const [cyphertext, setCyphertext] = useState<Ciphertext>();
+  const [imgUrl, setImgUrl] = useState<string>();
+  const [file, setFile] = useState<File>();
+  const [encryptedMetadata, setEncryptedMetadata] =
+    useState<EncryptedMetadataProps>();
+  const client = usePublicClient();
+  const { data: wallet } = useWalletClient();
 
-  const createCohort = async () => {
-    const cohort = await Cohort.create(config);
-    // const strategy = CbdStrategy.create(cohort);
-    // This is using hard coded cohort with id 2
-    // const deployedStrategy = await strategy.deploy(
-    //   signer.provider as providers.Web3Provider
-    // );
+  useEffect(() => {
+    if (imgUrl) {
+      URL.revokeObjectURL(imgUrl);
+    }
+    setImgUrl(undefined);
 
-    // const ritual = DkgRitual.fromObj({
-    //   id: 17,
-    //   threshold: 3,
-    //   dkgPublicKey: arrayify(
-    //     '0xa571bff49cfd520b2efb9727576c57420f29cefe95f5363849ff83f5e5b45912,0xbf3ebc9f3671aaa399e89d994815743c'
-    //   ),
-    // });
+    return () => {
+      if (imgUrl) {
+        URL.revokeObjectURL(imgUrl);
+      }
+    };
+  }, [encryptedMetadata]);
 
-    const stratConfig = {
-      decrypter: {
-        ritualId: 17,
-        threshold: 3,
-        porterUri,
-      },
-      dkgPublicKey: [
-        ...arrayify(
-          '0xa571bff49cfd520b2efb9727576c57420f29cefe95f5363849ff83f5e5b45912'
-        ),
-        ...arrayify('0xbf3ebc9f3671aaa399e89d994815743c'),
-      ],
+  const onEncrypt = async (data: MetadataFormInputs) => {
+    // TODO: check if client connected
+    const ritual = await getRitual({
+      ritualId,
+      client,
+    });
+
+    setThreshold(ritual.dkgSize);
+
+    const file = await data.file.item(0)?.arrayBuffer();
+
+    if (!file) {
+      window.alert('No file selected');
+      return;
+    }
+
+    const cyphertext = await encrypt({
+      message: new Uint8Array(file),
+      encryptingKey: ritual.publicKey,
+      condition,
+    });
+
+    setCyphertext(cyphertext.cyphertext);
+
+    const encryptedMetadata = {
+      title: data.title,
+      description: data.description,
+      image: toJsonStr(cyphertext),
+      conditions: toJsonStr(condition),
     };
 
-    const deployedStrategy = DeployedCbdStrategy.fromJSON(
-      JSON.stringify(stratConfig)
-    );
+    setEncryptedMetadata(encryptedMetadata);
+  };
 
-    const functionAbi = Revocation__factory.abi.find(
-      (abi) => abi.name === 'isRevoked'
-    );
+  const onDecrypt = async () => {
+    if (!wallet) {
+      window.alert('Please connect your wallet');
+      return;
+    }
 
-    // Had to go override `name` in the abi to get this to work
-    console.log(functionAbi);
+    if (!cyphertext) {
+      window.alert('No encrypted metadata');
+      return;
+    }
 
-    const condition1 = new conditions.base.ContractCondition({
-      contractAddress: revocationAddress,
-      method: 'isRevoked',
-      parameters: [':userAddress'],
-      functionAbi: Revocation__factory.abi.find(
-        (abi) => abi.name === 'isRevoked'
-      ),
-      chain: 80001,
-      returnValueTest: {
-        comparator: '==',
-        value: false,
+    const conditionCtx = await craftContext(condition, {}, wallet);
+
+    const plaintext = await retrieveAndDecrypt({
+      ritual: { id: ritualId, threshold },
+      client,
+      porter: {
+        uri: porterUri,
       },
+      condition,
+      conditionCtx,
+      variant: FerveoVariant.Simple,
+      cyphertext,
     });
 
-    const condition2 = new conditions.base.TimeCondition({
-      chain: 80001,
-      returnValueTest: {
-        comparator: '>',
-        value: 100,
+    const url = URL.createObjectURL(new Blob([plaintext]));
+    setImgUrl(url);
+  };
+
+  const createCohort = async () => {
+    // const condition2 = new conditions.base.TimeCondition({
+    //   chain: 80001,
+    //   returnValueTest: {
+    //     comparator: '>',
+    //     value: 100,
+    //   },
+    // });
+
+    // const condition = new conditions.CompoundCondition({
+    //   operands: [condition2.toObj(), condition1.toObj()],
+    //   operator: 'and',
+    // });
+
+    if (!wallet || !file) {
+      window.alert('Please connect your wallet');
+      return;
+    }
+
+    const ritual = await getRitual({
+      ritualId: 17,
+      client,
+    });
+    const cyphertext2 = await encrypt({
+      message: new Uint8Array(await file.arrayBuffer()),
+      encryptingKey: ritual.publicKey,
+      condition,
+    });
+
+    console.log(cyphertext2);
+
+    const conditionCtx2 = await craftContext(condition, {}, wallet);
+
+    const plaintext1 = await retrieveAndDecrypt({
+      ritual: {
+        id: 17,
+        threshold: 3,
       },
+      porter: {
+        uri: porterUri,
+      },
+      condition,
+      conditionCtx: conditionCtx2,
+      variant: FerveoVariant.Simple,
+      client,
+      cyphertext: cyphertext2.cyphertext,
     });
 
-    const condition = new conditions.CompoundCondition({
-      operands: [condition2.toObj(), condition1.toObj()],
-      operator: 'and',
-    });
-
-    const conditionExpr = new conditions.ConditionExpression(condition1);
-
-    console.log(conditionExpr.toJson());
-
-    const encrypter = deployedStrategy.makeEncrypter(conditionExpr);
-
-    const cyphertext = encrypter.encryptMessageCbd('hello world');
-
-    console.log(cyphertext);
-
-    const plaintext = await deployedStrategy.decrypter.retrieveAndDecrypt(
-      signer.provider as providers.Web3Provider,
-      conditionExpr,
-      0,
-      cyphertext.ciphertext
-    );
-
-    console.log(String.fromCharCode(...plaintext));
-
-    // const context = new conditions.ConditionContext(
-    //   [condition],
-    //   signer.provider as providers.Web3Provider
-    // );
-
-    // console.log(await context.toJson());
+    console.log(plaintext1);
   };
 
   return (
@@ -133,7 +203,34 @@ export function Index() {
         <ConnectButton />
       </div>
       <RevokeStatus revocationAddress={revocationAddress} />
-      <PrimaryButton onClick={createCohort}>Create Cohort</PrimaryButton>
+      <input
+        type="number"
+        placeholder="Ritual Id"
+        className="px-2 py-1 rounded bg-slate-900 mt-2 max-w-md"
+        value={ritualId}
+        onChange={(e) => setRitualId(parseInt(e.target.value))}
+      />
+      <input
+        type="file"
+        className="px-2 py-1 rounded bg-slate-900 mt-2 max-w-md"
+        accept="image/*"
+        onChange={(e) => setFile(e.target.files?.item(0) || undefined)}
+      />
+      <PrimaryButton onClick={createCohort}>Test</PrimaryButton>
+      <div className="mt-4">
+        <span className="font-bold text-xl mt-4">Metadata: </span>
+        <div className="grid grid-cols-2">
+          <div className="w-1/2">
+            <MetadataForm onSubmit={onEncrypt} />
+          </div>
+          <div>
+            {encryptedMetadata && <EncryptedMetadata {...encryptedMetadata} />}
+          </div>
+        </div>
+      </div>
+      {encryptedMetadata && (
+        <DecryptMetadata onDecrypt={onDecrypt} imgUrl={imgUrl} />
+      )}
     </div>
   );
 }

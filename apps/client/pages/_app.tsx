@@ -7,27 +7,35 @@ import {
   getDefaultWallets,
   RainbowKitProvider,
 } from '@rainbow-me/rainbowkit';
-import { configureChains, createClient, WagmiConfig } from 'wagmi';
+import { configureChains, createConfig, WagmiConfig } from 'wagmi';
 import { goerli, polygonMumbai } from 'wagmi/chains';
 import { alchemyProvider } from 'wagmi/providers/alchemy';
 import { publicProvider } from 'wagmi/providers/public';
 
+const { chains, publicClient, webSocketPublicClient } = configureChains(
+  [polygonMumbai],
+  [
+    alchemyProvider({ apiKey: 'OGnAWpUHVexy2UbQPpq7GNxXZODL-KO6' }),
+    publicProvider(),
+  ]
+);
+
+const { connectors } = getDefaultWallets({
+  appName: 'TAC POC',
+  chains,
+  projectId: 'dc54faff936797f790dc01ed7d52a3be',
+});
+
+const wagmiConfig = createConfig({
+  autoConnect: true,
+  connectors,
+  publicClient,
+  // webSocketPublicClient,
+});
+
 function CustomApp({ Component, pageProps }: AppProps) {
-  const { chains, provider } = configureChains(
-    [polygonMumbai],
-    [publicProvider()]
-  );
-
-  const { connectors } = getDefaultWallets({ appName: 'TAC POC', chains });
-
-  const wagmiClient = createClient({
-    autoConnect: true,
-    connectors,
-    provider,
-  });
-
   return (
-    <WagmiConfig client={wagmiClient}>
+    <WagmiConfig config={wagmiConfig}>
       <RainbowKitProvider chains={chains} theme={darkTheme()}>
         <Head>
           <title>Welcome to client!</title>
