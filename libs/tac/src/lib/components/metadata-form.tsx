@@ -1,69 +1,70 @@
-import { ConditionSet, DeployedStrategy } from '@nucypher/nucypher-ts';
 import { useRef } from 'react';
+import { SubmitHandler, useForm } from 'react-hook-form';
 import { PrimaryButton } from './button';
 import { EncryptedMetadataProps } from './encrypted-metadata';
 
 export interface MetadataFormProps {
-  strategy: DeployedStrategy;
-  conditionSet: ConditionSet;
-  setEncryptedMetadata: (encryptedMetadata: EncryptedMetadataProps) => void;
+  onSubmit: SubmitHandler<MetadataFormInputs>;
 }
 
-export const MetadataForm = ({
-  strategy,
-  conditionSet,
-  setEncryptedMetadata,
-}: MetadataFormProps) => {
-  const titleRef = useRef<HTMLInputElement>(null);
-  const descriptionRef = useRef<HTMLInputElement>(null);
-  const fileRef = useRef<HTMLInputElement>(null);
+export type MetadataFormInputs = {
+  title: string;
+  description: string;
+  file: FileList;
+};
 
-  const onEncrypt = async () => {
-    const encrypter = strategy.encrypter;
+export const MetadataForm = ({ onSubmit }: MetadataFormProps) => {
+  const { register, handleSubmit } = useForm<MetadataFormInputs>();
 
-    const file = fileRef.current?.files?.[0];
+  // const onEncrypt = async () => {
+  //   const encrypter = strategy.encrypter;
 
-    if (!file) {
-      alert('No file selected');
-      return;
-    }
+  //   const file = fileRef.current?.files?.[0];
 
-    const cyphertext = encrypter.encryptMessage(
-      new Uint8Array(await file.arrayBuffer()),
-      conditionSet
-    );
+  //   if (!file) {
+  //     alert('No file selected');
+  //     return;
+  //   }
 
-    const encryptedMetadata = {
-      title: titleRef.current?.value,
-      description: descriptionRef.current?.value,
-      image: cyphertext.toBytes(),
-      conditions: JSON.parse(cyphertext.conditions?.toString() || ''),
-    };
+  //   const cyphertext = encrypter.encryptMessage(
+  //     new Uint8Array(await file.arrayBuffer()),
+  //     conditionSet
+  //   );
 
-    setEncryptedMetadata(encryptedMetadata);
-  };
+  //   const encryptedMetadata = {
+  //     title: titleRef.current?.value,
+  //     description: descriptionRef.current?.value,
+  //     image: cyphertext.toBytes(),
+  //     conditions: JSON.parse(cyphertext.conditions?.toString() || ''),
+  //   };
+
+  //   setEncryptedMetadata(encryptedMetadata);
+  // };
 
   return (
-    <div className="flex flex-col gap-y-2 p-2">
+    <form
+      onSubmit={handleSubmit(onSubmit)}
+      className="flex flex-col gap-y-2 p-2"
+    >
       <input
-        ref={titleRef}
         type="text"
         placeholder="Title"
         className="px-2 py-1 rounded bg-slate-900"
+        {...register('title', { required: true })}
       />
       <input
-        ref={descriptionRef}
         type="text"
         placeholder="Description"
         className="px-2 py-1 rounded bg-slate-900"
+        {...register('description', { required: true })}
       />
       <input
-        ref={fileRef}
         type="file"
         placeholder="Description"
         className="px-2 py-1 rounded bg-slate-900"
+        {...register('file', { required: true })}
       />
-      <PrimaryButton onClick={onEncrypt}>Encrypt</PrimaryButton>
-    </div>
+      <PrimaryButton type="submit">Encrypt</PrimaryButton>
+    </form>
   );
 };

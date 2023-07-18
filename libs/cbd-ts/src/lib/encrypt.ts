@@ -12,30 +12,9 @@ export async function encrypt({
   condition: Condition;
   encryptingKey: DkgPublicKey;
 }) {
+  // TODO! Rename something actually useful
   const aad = toAad(condition);
   const cyphertext = ferveoEncrypt(message, aad, encryptingKey);
 
   return { aad, cyphertext };
-}
-
-export async function getCohortEncryptingKey({
-  ritualId,
-  client,
-}: {
-  ritualId: number;
-  client: PublicClient;
-}) {
-  const ritual = await client.readContract({
-    abi: coordinatorAbi,
-    address: coordinatorAddress,
-    functionName: 'rituals',
-    args: [BigInt(ritualId)],
-  });
-
-  const dkgPkBytes = new Uint8Array([
-    ...toBytes(ritual[5].word0),
-    ...toBytes(ritual[5].word1),
-  ]);
-
-  return DkgPublicKey.fromBytes(dkgPkBytes);
 }
