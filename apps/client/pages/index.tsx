@@ -130,12 +130,14 @@ export function Index() {
 
     console.log(cyphertext);
 
-    const plaintext = await deployedStrategy.decrypter.retrieveAndDecrypt(
-      signer?.provider as providers.Web3Provider,
-      conditionExpr,
-      0,
-      cyphertext.ciphertext
-    );
+    // const plaintext = await deployedStrategy.decrypter.retrieveAndDecrypt(
+    //   signer?.provider as providers.Web3Provider,
+    //   conditionExpr,
+    //   0,
+    //   cyphertext.ciphertext
+    // );
+
+    // console.log(String.fromCharCode(...plaintext));
 
     const plaintext1 = await retrieveAndDecrypt({
       ritual: {
@@ -153,14 +155,14 @@ export function Index() {
         functionAbi: {
           inputs: [
             {
-              name: '',
+              name: 'addr',
               type: 'address',
             },
           ],
           name: 'isRevoked',
           outputs: [
             {
-              name: '',
+              name: 'addr',
               type: 'bool',
             },
           ],

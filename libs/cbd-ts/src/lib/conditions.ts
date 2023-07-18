@@ -50,12 +50,18 @@ const conditionSchema = z.discriminatedUnion('conditionType', [
 
 export type Condition = z.infer<typeof conditionSchema>;
 
+// Cant pass extra props to Porter. Need to remove discriminator
 export function validateCondition(condition: Condition) {
   switch (condition.conditionType) {
-    case 'rpc':
-      return rpcConditionSchema.parse(condition);
-    case 'contract':
-      return contractConditionSchema.parse(condition);
+    case 'rpc': {
+      const { conditionType, ...rest } = rpcConditionSchema.parse(condition);
+      return rest;
+    }
+    case 'contract': {
+      const { conditionType, ...rest } =
+        contractConditionSchema.parse(condition);
+      return rest;
+    }
     // case 'time':
     // 	return timeConditionSchema.parse(condition);
     // case 'compound':
@@ -63,8 +69,14 @@ export function validateCondition(condition: Condition) {
   }
 }
 
+// TODO: Pass version as param
 export function toWasm(condition: Condition) {
-  return new Conditions(toJsonStr(validateCondition(condition)));
+  return new Conditions(
+    toJsonStr({
+      version: '1.0.0',
+      condition: validateCondition(condition), // Maybe dont bury validation here
+    })
+  );
 }
 
 export function toAad(condition: Condition) {

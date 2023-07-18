@@ -23,7 +23,7 @@ const { chains, publicClient, webSocketPublicClient } = configureChains(
 const { connectors } = getDefaultWallets({
   appName: 'TAC POC',
   chains,
-  projectId: '123',
+  projectId: 'dc54faff936797f790dc01ed7d52a3be',
 });
 
 const wagmiConfig = createConfig({
