@@ -1,9 +1,12 @@
 export const toBytes = (str: string): Uint8Array =>
   new TextEncoder().encode(str);
-  
+
 const u8ToBase64Replacer = (_key: string, value: unknown) => {
   if (value instanceof Uint8Array) {
     return `base64:${toBase64(value)}`;
+  }
+  if (typeof value === 'bigint') {
+    return Number(value);
   }
   return value;
 };
@@ -33,3 +36,10 @@ const sortedReplacer = (_key: string, value: unknown) => {
 
   return value;
 };
+
+export function randomBytes(bytesLength = 32): Uint8Array {
+  if (crypto && typeof crypto.getRandomValues === 'function') {
+    return crypto.getRandomValues(new Uint8Array(bytesLength));
+  }
+  throw new Error('crypto.getRandomValues must be defined');
+}

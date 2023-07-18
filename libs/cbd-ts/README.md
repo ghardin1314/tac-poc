@@ -1,7 +1,8 @@
-# cbd-ts
-
-This library was generated with [Nx](https://nx.dev).
-
-## Running unit tests
-
-Run `nx test cbd-ts` to execute the unit tests via [Jest](https://jestjs.io).
+- [x] Condition context
+- [ ] Cache signature
+- [ ] Make Encrypter
+- [ ] Encrypt plaintext
+- [ ] add default name for abi param
+- [ ] use abi type for abi param
+- [ ] add time and compound conditions
+- [ ] add other rpc methods

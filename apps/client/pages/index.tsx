@@ -14,8 +14,13 @@ import { Revocation__factory } from '@tac-poc/contracts';
 import { RevokeStatus, useEthersSigner } from '@tac-poc/tac';
 import { PrimaryButton } from 'libs/tac/src/lib/components/button';
 import { arrayify } from 'ethers/lib/utils.js';
-import { FerveoVariant, retrieveAndDecrypt } from '@tac-poc/cbd-ts';
-import { usePublicClient } from 'wagmi';
+import {
+  Condition,
+  craftContext,
+  FerveoVariant,
+  retrieveAndDecrypt,
+} from '@tac-poc/cbd-ts';
+import { usePublicClient, useWalletClient } from 'wagmi';
 
 const porterUri = 'https://porter-tapir.nucypher.community';
 
@@ -33,6 +38,7 @@ const aliceSecretKey =
 export function Index() {
   const signer = useEthersSigner();
   const client = usePublicClient();
+  const { data: wallet } = useWalletClient();
 
   const createCohort = async () => {
     const cohort = await Cohort.create(config);
@@ -68,13 +74,6 @@ export function Index() {
       JSON.stringify(stratConfig)
     );
 
-    const functionAbi = Revocation__factory.abi.find(
-      (abi) => abi.name === 'isRevoked'
-    );
-
-    // Had to go override `name` in the abi to get this to work
-    console.log(functionAbi);
-
     const condition1 = new conditions.base.ContractCondition({
       contractAddress: revocationAddress,
       method: 'isRevoked',
@@ -103,26 +102,21 @@ export function Index() {
       },
     });
 
-    const condition2 = new conditions.base.TimeCondition({
-      chain: 80001,
-      returnValueTest: {
-        comparator: '>',
-        value: 100,
-      },
-    });
+    // const condition2 = new conditions.base.TimeCondition({
+    //   chain: 80001,
+    //   returnValueTest: {
+    //     comparator: '>',
+    //     value: 100,
+    //   },
+    // });
 
-    const condition = new conditions.CompoundCondition({
-      operands: [condition2.toObj(), condition1.toObj()],
-      operator: 'and',
-    });
+    // const condition = new conditions.CompoundCondition({
+    //   operands: [condition2.toObj(), condition1.toObj()],
+    //   operator: 'and',
+    // });
 
     const conditionExpr = new conditions.ConditionExpression(condition1);
 
-    console.log(conditionExpr.toJson());
-
-    const conditionCtx = conditionExpr.buildContext(
-      signer?.provider as providers.Web3Provider
-    );
 
     const encrypter = deployedStrategy.makeEncrypter(conditionExpr);
 
@@ -139,6 +133,44 @@ export function Index() {
 
     // console.log(String.fromCharCode(...plaintext));
 
+    if (!wallet) {
+      window.alert('Please connect your wallet');
+      return;
+    }
+
+    const condition: Condition = {
+      conditionType: 'contract',
+      contractAddress: revocationAddress,
+      method: 'isRevoked',
+      parameters: [`:userAddress`],
+      functionAbi: {
+        inputs: [
+          {
+            name: 'addr',
+            type: 'address',
+          },
+        ],
+        name: 'isRevoked',
+        outputs: [
+          {
+            name: 'addr',
+            type: 'bool',
+          },
+        ],
+        stateMutability: 'view',
+        type: 'function',
+      },
+      chain: 80001,
+      returnValueTest: {
+        comparator: '==',
+        value: false,
+      },
+    };
+
+    const conditionCtx2 = await craftContext(condition, {}, wallet);
+
+    console.log(conditionCtx2);
+
     const plaintext1 = await retrieveAndDecrypt({
       ritual: {
         id: 17,
@@ -147,35 +179,8 @@ export function Index() {
       porter: {
         uri: porterUri,
       },
-      condition: {
-        conditionType: 'contract',
-        contractAddress: revocationAddress,
-        method: 'isRevoked',
-        parameters: [':userAddress'],
-        functionAbi: {
-          inputs: [
-            {
-              name: 'addr',
-              type: 'address',
-            },
-          ],
-          name: 'isRevoked',
-          outputs: [
-            {
-              name: 'addr',
-              type: 'bool',
-            },
-          ],
-          stateMutability: 'view',
-          type: 'function',
-        },
-        chain: 80001,
-        returnValueTest: {
-          comparator: '==',
-          value: false,
-        },
-      },
-      conditionCtx: new Context(await conditionCtx.toJson()),
+      condition,
+      conditionCtx: conditionCtx2,
       variant: FerveoVariant.Simple,
       client,
       cyphertext: cyphertext.ciphertext,

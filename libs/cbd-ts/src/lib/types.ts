@@ -14,3 +14,5 @@ export type Ritual = {
   id: number;
   threshold: number;
 };
+
+export type CustomParam = `:${string}`;
