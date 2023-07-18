@@ -1,7 +1,7 @@
 - [x] Condition context
 - [ ] Cache signature
-- [ ] Make Encrypter
-- [ ] Encrypt plaintext
+- [x] Make Encrypter
+- [x] Encrypt plaintext
 - [ ] add default name for abi param
 - [ ] use abi type for abi param
 - [ ] add time and compound conditions
